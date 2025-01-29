@@ -1,0 +1,210 @@
+import { Alert, Pressable, StyleSheet, Text, TextInput, View, FlatList } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
+import ScreenWrapper from '@/components/ScreenWrapper';
+import Button from '@/components/Button';
+import { hp, wp } from '@/helper/common';
+import { theme } from '@/constants/theme';
+import Heart from '@/assets/icons/Heart';
+import Plus from '@/assets/icons/Plus';
+import { useRouter } from 'expo-router';
+import Avatar from '@/components/Avatar';
+
+const Home = () => {
+    const { user, setAuth } = useAuth();
+    const router = useRouter();
+    const [tweet, setTweet] = useState('');
+    const [tweets, setTweets] = useState([]);
+    const [users, setUsers] = useState({});
+
+    const fetchTweets = useCallback(async () => {
+        const { data, error } = await supabase
+            .from("tweets")
+            .select("id, tweet, userId, created_at, likes")
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            console.error("Error fetching tweets:", error);
+        } else {
+            setTweets(data);
+            fetchUserNames(data);
+        }
+    }, []);
+
+    const fetchUserNames = async (tweets) => {
+        const userIds = tweets.map(tweet => tweet.userId);
+        const { data, error } = await supabase
+            .from("users")
+            .select("id, name")
+            .in("id", userIds);
+
+        if (error) {
+            console.error("Error fetching users:", error);
+        } else {
+            const usersMap = data.reduce((acc, user) => {
+                acc[user.id] = user.name;
+                return acc;
+            }, {});
+            setUsers(usersMap);
+        }
+    };
+
+    useEffect(() => {
+        fetchTweets();
+    }, [fetchTweets]);
+
+    const postTweet = async () => {
+        if (!tweet.trim()) return;
+
+        const { data, error } = await supabase
+            .from("tweets")
+            .insert([{ userId: user.id, tweet: tweet }]);
+
+        if (error) {
+            Alert.alert("Error", "Could not post tweet.");
+        } else {
+            setTweets([data[0], ...tweets]);
+            setTweet('');
+        }
+    };
+
+    const onLogout = async () => {
+        setAuth(null);
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            Alert.alert('Sign out', 'Error signing out!');
+        }
+    };
+
+    const updateLikes = async (tweetId, currentLikes) => {
+        const { data, error } = await supabase
+            .from("tweets")
+            .update({ likes: currentLikes + 1 })
+            .eq("id", tweetId);
+
+        if (error) {
+            console.error("Error updating likes:", error);
+        } else {
+            setTweets(tweets.map(tweet => tweet.id === tweetId ? { ...tweet, likes: tweet.likes + 1 } : tweet));
+        }
+    };
+
+    const renderTweet = ({ item }) => (
+        <View style={styles.tweetCard}>
+            <Text style={styles.username}>{users[item.userId] || "Unknown"}</Text>
+            <Text style={styles.tweetText}>{item.tweet}</Text>
+            <Pressable onPress={() => updateLikes(item.id, item.likes)} style={styles.likeButton}>
+                <Text>❤️ {item.likes}</Text>
+            </Pressable>
+        </View>
+    );
+
+    return (
+        <ScreenWrapper bg={"white"}>
+            <View style={styles.header}>
+                <View style={styles.container}>
+                    <Text style={styles.title}>ZYLO</Text>
+                    <View style={styles.icons}>
+                        <Pressable onPress={() => router.push('/profile')}>
+                            <Avatar url={user?.image} size={hp(4.3)} />
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+
+            <View style={styles.tweetInputContainer}>
+                <TextInput
+                    style={styles.tweetInput}
+                    placeholder="What's on your mind?"
+                    value={tweet}
+                    onChangeText={setTweet}
+                    multiline
+                />
+                <Button title="Post" onPress={postTweet} bg={"black"} />
+            </View>
+
+            <FlatList
+                data={tweets}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={renderTweet}
+                contentContainerStyle={styles.flatListContent}
+            />
+        </ScreenWrapper>
+    );
+};
+
+export default React.memo(Home);
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        paddingHorizontal: wp(4),
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 10,
+        marginHorizontal: wp(4),
+    },
+    title: {
+        color: theme.colors.text,
+        fontSize: hp(4),
+        fontWeight: theme.fonts.bold,
+    },
+    icons: {
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: wp(3),
+    },
+    tweetInputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: wp(4),
+        marginBottom: 10,
+    },
+    tweetInput: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: theme.colors.gray,
+        borderRadius: theme.radius.sm,
+        padding: 10,
+        marginRight: 10,
+        minHeight: hp(10),
+    },
+    flatListContent: {
+        paddingBottom: hp(2),
+    },
+    tweetCard: {
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.gray,
+        backgroundColor: theme.colors.white,
+        marginHorizontal: wp(4),
+        borderRadius: theme.radius.sm,
+        marginBottom: hp(1),
+        shadowColor: theme.colors.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    username: {
+        fontWeight: "bold",
+        fontSize: hp(2),
+        marginBottom: hp(0.5),
+    },
+    tweetText: {
+        fontSize: hp(1.8),
+        color: theme.colors.text,
+    },
+    likeButton: {
+        marginTop: hp(1),
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+});
