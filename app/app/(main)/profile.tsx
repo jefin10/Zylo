@@ -148,7 +148,7 @@ const Profile = () => {
   )
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper bg= {'white'}>
       <View style={{ flex: 1, backgroundColor: 'white', paddingHorizontal: wp(4) }}>
         <View>
           <Header title="Profile" showBackButton={true} />

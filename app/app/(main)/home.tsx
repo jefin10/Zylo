@@ -125,7 +125,7 @@ const updateLikes = async (tweetId, currentLikes) => {
   );
 
     return (
-        <ScreenWrapper bg={"white"}>
+        <ScreenWrapper bg={"white"} >
             <View style={styles.header}>
                 <View style={styles.container}>
                     <Text style={styles.title}>ZYLO</Text>
@@ -161,6 +161,7 @@ const updateLikes = async (tweetId, currentLikes) => {
 export default React.memo(Home);
 
 const styles = StyleSheet.create({
+   
   container: {
       flex: 1,
       paddingHorizontal: wp(4),
