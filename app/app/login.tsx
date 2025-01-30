@@ -40,7 +40,7 @@ const Login = () => {
   };
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper bg={"white"}>
       <StatusBar style="dark" />
       <View style={styles.container}>
         <View style={styles.header}>
