@@ -3,7 +3,7 @@ export const getUserImageSrc = imagePath =>{
         return {url: imagePath}
     }
     else{
-        return require ("@/assets/images/person.jpg")
+        return require ("@/assets/images/person.png")
     }
 
 }
